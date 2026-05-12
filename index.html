@@ -2,28 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    />
-    <meta
-      name="description"
-      content="Top-down fireworks simulator — watch explosions from directly above."
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Fireworks from Above</title>
     <style>
-      *,
-      *::before,
-      *::after {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-      html,
-      body {
-        width: 100%;
-        height: 100%;
+      html, body {
+        width: 100%; height: 100%;
         background: #000008;
         overflow: hidden;
         touch-action: none;
@@ -33,61 +18,29 @@
       }
 
       #app {
-        position: fixed;
-        inset: 0;
+        position: fixed; inset: 0;
         cursor: crosshair;
       }
 
-      canvas {
-        display: block;
-        width: 100% !important;
-        height: 100% !important;
-      }
+      canvas { display: block; width: 100% !important; height: 100% !important; }
 
-      /* Subtle vignette — purely atmospheric, no window frame */
-      #vignette {
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        z-index: 10;
-        background: radial-gradient(
-          ellipse 90% 90% at 50% 50%,
-          transparent 50%,
-          rgba(0, 0, 8, 0.45) 80%,
-          rgba(0, 0, 8, 0.88) 100%
-        );
-      }
-
-      /* WebGL error fallback */
       #error {
         display: none;
-        position: fixed;
-        inset: 0;
-        align-items: center;
-        justify-content: center;
-        flex-direction: column;
-        color: rgba(255, 255, 255, 0.6);
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        position: fixed; inset: 0;
+        align-items: center; justify-content: center; flex-direction: column;
+        color: rgba(255,255,255,0.7);
+        font-family: system-ui, sans-serif;
         font-size: 15px;
         background: #000008;
-        gap: 12px;
-        z-index: 100;
+        gap: 12px; z-index: 100;
       }
-
       #error.show { display: flex; }
-
-      #error h2 {
-        font-weight: 400;
-        font-size: 18px;
-        color: rgba(255, 255, 255, 0.8);
-      }
     </style>
   </head>
   <body>
     <div id="app"></div>
-    <div id="vignette"></div>
-<div id="error">
-      <h2>WebGL Unavailable</h2>
+    <div id="error">
+      <h2 style="font-weight:400;font-size:18px">WebGL Unavailable</h2>
       <p>Please enable WebGL or try a different browser.</p>
     </div>
     <script type="module" src="/src/main.js"></script>
