@@ -210,18 +210,18 @@ export class ParticlePool {
       this.pos[i * 3 + 1] += this.vy[i] * dt;
       this.pos[i * 3 + 2] += this.vz[i] * dt;
 
-      // ── Color cooling: white-hot → palette color → fade ──
+      // ── Color: white-hot flash → palette colour → fade to black ──
       let r, g, b;
-      const HOT = 0.12; // fraction of lifetime spent white-hot
+      const HOT = 0.18; // longer white-hot phase for better visibility
       if (t < HOT) {
         const h = t / HOT;
         r = lerp(1.0, this.baseR[i], h);
         g = lerp(1.0, this.baseG[i], h);
         b = lerp(1.0, this.baseB[i], h);
       } else {
+        // Holds palette colour through ~60% of life, then drops
         const cool = 1.0 - (t - HOT) / (1.0 - HOT);
-        // Non-linear: holds color longer, drops quickly near end
-        const cf = Math.pow(cool, 1.4);
+        const cf   = Math.pow(cool, 1.2);
         r = this.baseR[i] * cf;
         g = this.baseG[i] * cf;
         b = this.baseB[i] * cf;
@@ -230,20 +230,20 @@ export class ParticlePool {
       // ── Flicker ──
       let flk = 1.0;
       if (this.flicker[i]) {
-        flk = 0.65 + 0.35 * Math.abs(Math.sin(time * this.flickRate[i] + i * 0.83));
+        flk = 0.62 + 0.38 * Math.abs(Math.sin(time * this.flickRate[i] + i * 0.83));
       }
 
       this.col[i * 3]     = r * flk;
       this.col[i * 3 + 1] = g * flk;
       this.col[i * 3 + 2] = b * flk;
 
-      // ── Alpha: fast fade-in, gradual fade-out ──
-      const fadeIn  = clamp(this.age[i] / 0.06, 0, 1);
-      const fadeOut = 1.0 - t * t;
+      // ── Alpha: very fast fade-in (one frame), gradual fade-out ──
+      const fadeIn  = clamp(this.age[i] / 0.025, 0, 1);
+      const fadeOut = Math.pow(1.0 - t, 1.1); // slightly concave — holds longer
       this.alpha[i] = fadeIn * fadeOut;
 
-      // ── Size: gentle shrink ──
-      this.sizes[i] = this.baseSize[i] * (1.0 - t * 0.65);
+      // ── Size: particles shrink gently ──
+      this.sizes[i] = this.baseSize[i] * (1.0 - t * 0.55);
     }
 
     this._posAttr.needsUpdate   = true;
