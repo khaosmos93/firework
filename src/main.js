@@ -39,7 +39,6 @@ if (!hasWebGL()) {
 
 // ── Initialise systems ────────────────────────────────────────────────────────
 const container  = document.getElementById('app');
-const hint       = document.getElementById('hint');
 
 const renderer   = new Renderer(container, isMobile);
 const pool       = new ParticlePool(MAX_PARTICLES);
@@ -62,14 +61,8 @@ function launch(ex, ey, ez, overrides = {}) {
 }
 
 // ── User input ────────────────────────────────────────────────────────────────
-let hintHidden = false;
 
 const input = new Input(container, (ndcX, ndcY) => {
-  if (!hintHidden) {
-    hintHidden = true;
-    hint.classList.add('fade');
-  }
-
   // Raycast to explosion altitude plane → burst appears at exact tap location
   const pos = renderer.screenToExplosion(ndcX, ndcY);
   if (!pos) return;
@@ -89,7 +82,7 @@ const input = new Input(container, (ndcX, ndcY) => {
 // ── Auto-ambient fireworks ────────────────────────────────────────────────────
 // A few background bursts fire automatically to keep the scene alive.
 
-let _autoCountdown = rand(3, 7);
+let _autoCountdown = 0; // fire immediately on first frame
 
 function autoFire() {
   const count = Math.floor(rand(1, 3.5));
