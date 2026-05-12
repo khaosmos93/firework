@@ -1,18 +1,16 @@
 /**
  * main.js — bootstrap and animation loop.
  *
- * System wiring:
- *   Input → Renderer.screenToGround → FireworkGen.generate → Firework (→ ParticlePool)
- *   Atmosphere vibration → Renderer.applyVibration
+ * Top-down view: camera is nearly directly overhead.
+ * Click/tap maps to the explosion altitude plane so bursts appear
+ * exactly where the user touches.
  *
  * GitHub Pages deployment:
  *   npm install && npm run build
- *   Output is in /dist — push that folder (or the repo root with /dist) to
- *   the gh-pages branch, or configure Pages to serve from /dist on main.
- *   The vite.config.js base path is already set to '/firework/'.
+ *   Deploy the dist/ folder.  Base path is '/firework/' — set in vite.config.js.
  */
 
-import { Renderer }     from './Renderer.js';
+import { Renderer, EXPLOSION_ALTITUDE } from './Renderer.js';
 import { ParticlePool } from './ParticlePool.js';
 import { Firework }     from './Firework.js';
 import { FireworkGen }  from './FireworkGen.js';
@@ -30,11 +28,7 @@ const MAX_PARTICLES = isMobile ? 22000 : 52000;
 function hasWebGL() {
   try {
     const c = document.createElement('canvas');
-    return !!(
-      c.getContext('webgl2') ||
-      c.getContext('webgl') ||
-      c.getContext('experimental-webgl')
-    );
+    return !!(c.getContext('webgl2') || c.getContext('webgl') || c.getContext('experimental-webgl'));
   } catch { return false; }
 }
 
@@ -57,11 +51,14 @@ renderer.scene.add(pool.points);
 // ── Active firework list ──────────────────────────────────────────────────────
 const fireworks = [];
 
-function launch(gx, gz, paramOverrides = {}) {
-  // Graceful degradation: skip if pool is very full
-  if (pool.freeCount < 350) return;
-  const params = gen.generate(paramOverrides);
-  fireworks.push(new Firework(pool, params, gx, gz));
+/**
+ * Spawn a firework at a 3D world position.
+ * ex, ey, ez = explosion center (ey defaults to EXPLOSION_ALTITUDE).
+ */
+function launch(ex, ey, ez, overrides = {}) {
+  if (pool.freeCount < 300) return; // skip if pool nearly exhausted
+  const params = gen.generate(overrides);
+  fireworks.push(new Firework(pool, params, ex, ey, ez));
 }
 
 // ── User input ────────────────────────────────────────────────────────────────
@@ -73,48 +70,45 @@ const input = new Input(container, (ndcX, ndcY) => {
     hint.classList.add('fade');
   }
 
-  const groundPos = renderer.screenToGround(ndcX, ndcY);
-  if (!groundPos) return;
+  // Raycast to explosion altitude plane → burst appears at exact tap location
+  const pos = renderer.screenToExplosion(ndcX, ndcY);
+  if (!pos) return;
 
-  // Clamp to reasonable distance so faraway clicks still produce visible fireworks
-  const maxDist = 12000;
-  const d = Math.sqrt(groundPos.x * groundPos.x + groundPos.z * groundPos.z);
-  if (d > maxDist) {
-    const scale = maxDist / d;
-    groundPos.x *= scale;
-    groundPos.z *= scale;
+  // Clamp horizontal distance to keep fireworks visible on screen
+  const MAX_DIST = 10000;
+  const d = Math.sqrt(pos.x * pos.x + pos.z * pos.z);
+  if (d > MAX_DIST) {
+    const s = MAX_DIST / d;
+    pos.x *= s;
+    pos.z *= s;
   }
 
-  launch(groundPos.x, groundPos.z);
+  launch(pos.x, pos.y, pos.z);
 });
 
-// ── Auto-ambient horizon fireworks ────────────────────────────────────────────
-// Occasional distant fireworks fire automatically for cinematic effect
+// ── Auto-ambient fireworks ────────────────────────────────────────────────────
+// A few background bursts fire automatically to keep the scene alive.
 
-let _autoTimer     = rand(3, 7); // first auto fire in 3–7 sec
-let _autoCountdown = _autoTimer;
+let _autoCountdown = rand(3, 7);
 
-function autoFireHorizon() {
-  // Spawn 1–3 small distant fireworks in a random direction
+function autoFire() {
   const count = Math.floor(rand(1, 3.5));
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI * 2;
-    const dist  = rand(1800, 5500);
-    const gx    = Math.cos(angle) * dist;
-    const gz    = Math.sin(angle) * dist - rand(500, 2000); // biased forward
+    const dist  = rand(1500, 5000);
+    const ex    = Math.cos(angle) * dist;
+    const ez    = Math.sin(angle) * dist;
+    const ey    = EXPLOSION_ALTITUDE + rand(-80, 120);
 
-    launch(gx, gz, {
+    launch(ex, ey, ez, {
       particleCount: Math.floor(rand(60, 200)),
-      baseRadius:    rand(60, 160),
-      brightness:    rand(0.2, 0.55),
-      apexHeight:    rand(100, 300),
-      sparkLifetime: rand(0.8, 2.2),
-      sparkSizeBase: rand(2, 6),
+      baseRadius:    rand(80, 200),
+      brightness:    rand(0.22, 0.55),
+      sparkLifetime: rand(0.9, 2.5),
+      sparkSizeBase: rand(3, 8),
     });
   }
-
-  // Schedule next auto-fire: 4–12 seconds
-  _autoCountdown = rand(4, 12);
+  _autoCountdown = rand(4, 11);
 }
 
 // ── Animation loop ────────────────────────────────────────────────────────────
@@ -123,32 +117,30 @@ let _lastTime = -1;
 function animate(tsMs) {
   requestAnimationFrame(animate);
 
-  // Convert timestamp and clamp dt to avoid spiral-of-death on tab re-focus
   const t  = tsMs * 0.001;
   const dt = _lastTime < 0 ? 0.016 : Math.min(t - _lastTime, 0.05);
   _lastTime = t;
 
-  // Auto horizon fireworks
+  // Auto ambient
   _autoCountdown -= dt;
-  if (_autoCountdown <= 0) autoFireHorizon();
+  if (_autoCountdown <= 0) autoFire();
 
-  // Atmosphere & vibration
+  // Atmosphere drift
   atmosphere.update(dt);
-  renderer.applyVibration(atmosphere.getVibration());
+  renderer.applyDrift(atmosphere.getDrift());
 
-  // Keep the particle shader scale uniform in sync with canvas size
+  // Particle shader scale sync
   pool.setCanvasHeight(renderer.canvasHeight);
 
-  // Advance fireworks (remove done ones)
+  // Advance fireworks
   for (let i = fireworks.length - 1; i >= 0; i--) {
-    fireworks[i].update(dt, t);
+    fireworks[i].update(dt);
     if (fireworks[i].done) fireworks.splice(i, 1);
   }
 
-  // Update particle physics + GPU buffers
+  // Physics + GPU upload
   pool.update(dt, t);
 
-  // Render
   renderer.render();
 }
 

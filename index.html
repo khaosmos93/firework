@@ -8,9 +8,9 @@
     />
     <meta
       name="description"
-      content="Watch fireworks from an airplane window at night. Click anywhere to launch."
+      content="Top-down fireworks simulator — watch explosions from directly above."
     />
-    <title>Airplane View Fireworks</title>
+    <title>Fireworks from Above</title>
     <style>
       *,
       *::before,
@@ -26,7 +26,6 @@
         height: 100%;
         background: #000008;
         overflow: hidden;
-        /* Disable pull-to-refresh and default touch gestures */
         touch-action: none;
         overscroll-behavior: none;
         -webkit-user-select: none;
@@ -39,51 +38,38 @@
         cursor: crosshair;
       }
 
-      /* Canvas fills the container — three.js sets pixel dimensions via setSize */
       canvas {
         display: block;
         width: 100% !important;
         height: 100% !important;
       }
 
-      /* Airplane-window vignette: dark oval frame */
+      /* Subtle vignette — purely atmospheric, no window frame */
       #vignette {
         position: fixed;
         inset: 0;
         pointer-events: none;
         z-index: 10;
         background: radial-gradient(
-          ellipse 78% 88% at 50% 52%,
-          transparent 35%,
-          rgba(0, 0, 4, 0.55) 68%,
-          rgba(0, 0, 4, 0.93) 100%
+          ellipse 90% 90% at 50% 50%,
+          transparent 50%,
+          rgba(0, 0, 8, 0.45) 80%,
+          rgba(0, 0, 8, 0.88) 100%
         );
       }
 
-      /* Subtle window-frame reflection lines */
-      #frame {
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        z-index: 11;
-        border: 2px solid rgba(255, 255, 255, 0.025);
-        border-radius: 18% / 14%;
-        margin: 4% 8%;
-        box-shadow: inset 0 0 60px rgba(255, 255, 255, 0.02);
-      }
-
-      /* Hint text — fades out after first interaction */
+      /* Hint text — fades after first tap */
       #hint {
         position: fixed;
         bottom: 32px;
         left: 50%;
         transform: translateX(-50%);
-        color: rgba(255, 255, 255, 0.22);
+        color: rgba(255, 255, 255, 0.2);
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui,
           sans-serif;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 300;
-        letter-spacing: 0.22em;
+        letter-spacing: 0.25em;
         text-transform: uppercase;
         pointer-events: none;
         z-index: 20;
@@ -92,9 +78,7 @@
         white-space: nowrap;
       }
 
-      #hint.fade {
-        opacity: 0;
-      }
+      #hint.fade { opacity: 0; }
 
       /* WebGL error fallback */
       #error {
@@ -112,9 +96,7 @@
         z-index: 100;
       }
 
-      #error.show {
-        display: flex;
-      }
+      #error.show { display: flex; }
 
       #error h2 {
         font-weight: 400;
@@ -126,8 +108,7 @@
   <body>
     <div id="app"></div>
     <div id="vignette"></div>
-    <div id="frame"></div>
-    <div id="hint">tap below to launch</div>
+    <div id="hint">tap to ignite</div>
     <div id="error">
       <h2>WebGL Unavailable</h2>
       <p>Please enable WebGL or try a different browser.</p>
